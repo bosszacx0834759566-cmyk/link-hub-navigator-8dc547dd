@@ -14,7 +14,7 @@ import {
   type AssetKind,
 } from '@/lib/ololink';
 import { REGIONS } from '@/lib/layers';
-import { MAP_H, MAP_W, linkPath, livePosition, project, sceneTime, type LatLon } from '@/lib/geo2d';
+import { MAP_H, MAP_W, arcPath, livePosition, project, sceneTime, type LatLon } from '@/lib/geo2d';
 
 const KIND_COLOR: Record<AssetKind, string> = {
   satellite: '#7dd3fc',
@@ -34,6 +34,15 @@ const LABEL_DY: Record<AssetKind, number> = {
   drone: 15,
   ground: 10,
   customer: 20,
+};
+
+/** surface assets sit within ~1 degree of each other — fan them out in screen space */
+const PIXEL_OFFSET: Record<AssetKind, { x: number; y: number }> = {
+  satellite: { x: 0, y: 0 },
+  haps: { x: -26, y: -18 },
+  drone: { x: -30, y: 14 },
+  ground: { x: 0, y: 0 },
+  customer: { x: 30, y: 16 },
 };
 
 const KIND_SIZE: Record<AssetKind, number> = {
@@ -120,7 +129,21 @@ export function MapScene({ state }: { state: OloLinkState }) {
 
   const pointOf = (id: string) => {
     const ll = positions[id];
-    return ll ? project(ll.lat, ll.lon) : null;
+    const asset = ASSET_BY_ID[id];
+    if (!ll || !asset) return null;
+    const p = project(ll.lat, ll.lon);
+    const o = PIXEL_OFFSET[asset.kind];
+    return { x: p.x + o.x, y: p.y + o.y };
+  };
+
+  /** keep link endpoints on the same side of the antimeridian */
+  const pairPoints = (fromId: string, toId: string) => {
+    const a = pointOf(fromId);
+    const b = pointOf(toId);
+    if (!a || !b) return null;
+    const shifted = { ...b };
+    if (Math.abs(shifted.x - a.x) > MAP_W / 2) shifted.x += shifted.x > a.x ? -MAP_W : MAP_W;
+    return { a, b: shifted };
   };
 
   return (
@@ -144,6 +167,11 @@ export function MapScene({ state }: { state: OloLinkState }) {
                       0.46 0.82 1.00 0 0.07
                       0    0    0    1 0"
             />
+            <feComponentTransfer>
+              <feFuncR type="linear" slope="1.9" intercept="0.02" />
+              <feFuncG type="linear" slope="1.9" intercept="0.03" />
+              <feFuncB type="linear" slope="1.9" intercept="0.05" />
+            </feComponentTransfer>
           </filter>
         </defs>
 
@@ -245,13 +273,12 @@ export function MapScene({ state }: { state: OloLinkState }) {
         {/* communication links */}
         {layers.routes &&
           visibleLinks.map((l) => {
-            const a = positions[l.segment.from];
-            const b = positions[l.segment.to];
-            if (!a || !b) return null;
+            const pts = pairPoints(l.segment.from, l.segment.to);
+            if (!pts) return null;
             const onRoute = routeIds.has(l.segment.id);
             const isSelected = selectedLink === l.segment.id;
             const color = onRoute ? STATUS_META[l.status].color : TECH_META[l.segment.tech].color;
-            const d = linkPath(a, b);
+            const d = arcPath(pts.a, pts.b);
             return (
               <g
                 key={l.segment.id}

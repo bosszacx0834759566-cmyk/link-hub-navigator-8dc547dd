@@ -61,20 +61,14 @@ export function livePositionById(id: string, t: number): LatLon | null {
   return a ? livePosition(a, t) : null;
 }
 
-/** Shortest-path polyline between two points, tolerant of the antimeridian. */
-export function linkPath(a: LatLon, b: LatLon): string {
-  let lonB = b.lon;
-  if (Math.abs(lonB - a.lon) > 180) lonB += a.lon > lonB ? 360 : -360;
-
-  const pa = project(a.lat, a.lon);
-  const pb = project(b.lat, lonB);
-  // gentle arc so parallel routes stay readable
+/** Quadratic arc between two screen points (already antimeridian-corrected). */
+export function arcPath(pa: { x: number; y: number }, pb: { x: number; y: number }): string {
   const mx = (pa.x + pb.x) / 2;
   const my = (pa.y + pb.y) / 2;
   const dx = pb.x - pa.x;
   const dy = pb.y - pa.y;
   const len = Math.hypot(dx, dy) || 1;
-  const bow = Math.min(38, len * 0.16);
+  const bow = Math.min(34, len * 0.14);
   const cx = mx + (-dy / len) * bow;
   const cy = my + (dx / len) * bow;
   return `M ${pa.x.toFixed(2)} ${pa.y.toFixed(2)} Q ${cx.toFixed(2)} ${cy.toFixed(2)} ${pb.x.toFixed(2)} ${pb.y.toFixed(2)}`;
