@@ -1,11 +1,17 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { lazy, Suspense } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 
 import { useOloLink } from '@/hooks/use-ololink';
 import { TopNav } from '@/components/ololink/top-nav';
 import { ContextPanel } from '@/components/ololink/context-panel';
 import { ObjectCard } from '@/components/ololink/object-card';
 import { Dock } from '@/components/ololink/dock';
+import { ViewSwitch } from '@/components/ololink/view-switch';
+
+const MapScene = lazy(() =>
+  import('@/components/ololink/map-scene').then((m) => ({ default: m.MapScene }))
+);
 
 const GlobeScene = lazy(() =>
   import('@/components/ololink/globe-scene').then((m) => ({ default: m.GlobeScene }))
@@ -50,7 +56,31 @@ function Explorer() {
             </div>
           }
         >
-          <GlobeScene state={state} />
+          <AnimatePresence mode="wait" initial={false}>
+            {state.view === '3d' ? (
+              <motion.div
+                key="view-3d"
+                className="absolute inset-0"
+                initial={{ opacity: 0, scale: 1.06, filter: 'blur(6px)' }}
+                animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+                exit={{ opacity: 0, scale: 1.06, filter: 'blur(6px)' }}
+                transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <GlobeScene state={state} />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="view-2d"
+                className="absolute inset-0"
+                initial={{ opacity: 0, scale: 0.94, filter: 'blur(6px)' }}
+                animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+                exit={{ opacity: 0, scale: 0.94, filter: 'blur(6px)' }}
+                transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <MapScene state={state} />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </Suspense>
       </div>
 
@@ -61,6 +91,9 @@ function Explorer() {
         onToggle={state.togglePanel}
         alertCount={state.profile.alerts.length}
       />
+
+      {/* view mode — same mission state, different projection */}
+      <ViewSwitch view={state.view} onChange={state.setView} />
 
       {/* LEVEL 3 — contextual side panel */}
       <ContextPanel state={state} />
