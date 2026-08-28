@@ -27,6 +27,15 @@ const KIND_COLOR: Record<AssetKind, string> = {
 const WEATHER_COLOR = { CLOUD: '#94a3b8', RAIN: '#38bdf8', STORM: '#f472b6' } as const;
 
 /** Nodes render at slightly different sizes so the altitude tiers stay readable. */
+/** vertical label stagger keeps the surface cluster (GS / customer / drone) legible */
+const LABEL_DY: Record<AssetKind, number> = {
+  satellite: -9,
+  haps: -16,
+  drone: 15,
+  ground: 10,
+  customer: 20,
+};
+
 const KIND_SIZE: Record<AssetKind, number> = {
   satellite: 5,
   haps: 4.5,
@@ -130,9 +139,9 @@ export function MapScene({ state }: { state: OloLinkState }) {
           <filter id="map-basemap">
             <feColorMatrix
               type="matrix"
-              values="0.12 0.22 0.28 0 0.01
-                      0.16 0.34 0.40 0 0.02
-                      0.24 0.46 0.60 0 0.04
+              values="0.26 0.44 0.52 0 0.02
+                      0.34 0.62 0.72 0 0.04
+                      0.46 0.82 1.00 0 0.07
                       0    0    0    1 0"
             />
           </filter>
@@ -147,7 +156,7 @@ export function MapScene({ state }: { state: OloLinkState }) {
           y={0}
           width={MAP_W}
           height={MAP_H}
-          opacity={0.55}
+          opacity={0.9}
           filter="url(#map-basemap)"
           preserveAspectRatio="none"
         />
@@ -312,7 +321,7 @@ export function MapScene({ state }: { state: OloLinkState }) {
               {layers.labels && (
                 <text
                   x={0}
-                  y={-KIND_SIZE[a.kind] - 5}
+                  y={LABEL_DY[a.kind]}
                   textAnchor="middle"
                   fill={isSelected ? '#e0f2fe' : '#cbd5e1'}
                   fillOpacity={isSelected ? 1 : 0.62}
