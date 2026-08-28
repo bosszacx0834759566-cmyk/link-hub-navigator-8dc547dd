@@ -23,6 +23,8 @@ export type RailId =
   | 'settings'
   | 'context';
 
+export type ViewMode = '3d' | '2d';
+
 export interface Selection {
   type: 'asset' | 'link';
   id: string;
@@ -73,6 +75,9 @@ export interface OloLinkState {
   aiProcessing: boolean;
   running: boolean;
   layers: { weather: boolean; orbits: boolean; labels: boolean; routes: boolean };
+  /** spatial environment view mode — same mission state, different projection */
+  view: ViewMode;
+  setView: (v: ViewMode) => void;
   techFilter: Record<Tech, boolean>;
   /** receiverId -> satellite id currently inside a simulated communication window */
   windows: Record<string, string | null>;
@@ -99,6 +104,7 @@ export function useOloLink(): OloLinkState {
   const [rerouteSeq, setRerouteSeq] = useState(0);
   const [reroutingIds, setReroutingIds] = useState<Set<string>>(new Set());
   const [layers, setLayers] = useState({ weather: true, orbits: true, labels: true, routes: true });
+  const [view, setViewState] = useState<ViewMode>('3d');
   const [techFilter, setTechFilter] = useState<Record<Tech, boolean>>({
     OPTICAL: true,
     FSO: true,
@@ -251,6 +257,8 @@ export function useOloLink(): OloLinkState {
         setPanel((p) => (p === 'context' ? null : p));
       }
     },
+    view,
+    setView: (v) => setViewState(v),
     toggleLayer: (k) => setLayers((l) => ({ ...l, [k]: !l[k] })),
     setRunning,
     approve: () => push('OK', `Operator approved: ${profile.ai.action}`),
